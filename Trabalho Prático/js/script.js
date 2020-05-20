@@ -11,6 +11,8 @@ function start() {
   greenInput.addEventListener('input', handleValues);
   blueInput.addEventListener('input', handleValues);
 
+  var rgbText = document.querySelector('#preview');
+
   var preview = document.querySelector('.preview');
   changeBackgroundColor(0, 0, 0);
 
@@ -33,5 +35,11 @@ function start() {
 
   function changeBackgroundColor(r, g, b) {
     preview.style.background = `rgb(${r}, ${g}, ${b})`;
+
+    setRGBInfo(r, g, b);
+  }
+
+  function setRGBInfo(r, g, b) {
+    rgbText.textContent = `rgb(${r}, ${g}, ${b})`;
   }
 }
