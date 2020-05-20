@@ -1,5 +1,5 @@
 # RGB Selector
 
-Here you will be able to select a color and acquire its rgb reference.
+Here you will be able to select a color and acquire its rgb reference with only html, css and javascript.
 
 <img src="https://github.com/carloshrf/IGTI-Bootcamp/blob/master/Trabalho%20Pr%C3%A1tico/public/preview.png?raw=true" alt="preview" />
