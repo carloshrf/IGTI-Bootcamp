@@ -1,0 +1,16 @@
+body {
+  font-family: Roboto, sans-serif;
+  padding: 0 10%;
+  align-items: center;
+}
+
+.root {
+  width: 100%;
+}
+
+.deduction {
+  margin: 25px 0;
+  display: flex;
+  flex-direction: row;
+  justify-content: space-between;
+}
