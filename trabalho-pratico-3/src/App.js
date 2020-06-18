@@ -92,12 +92,13 @@ export default class App extends Component {
         <div>
           <p style={{fontWeight: 'bold', fontSize: '30px', textAlign: 'center', marginBottom:'10px'}}>React Salário</p>
           <div className="brute-salary">
+
             <label>Saláro Bruto</label>
               <CurrencyInput 
                 prefix='R$ ' 
                 decimalSeparator=',' 
                 thousandSeparator='.' 
-                onBlur={this.handleSalary}
+                onChangeEvent={this.handleSalary}
                 value={bruteSalary}
               />
 
