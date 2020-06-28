@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-const API_URL = 'localhost:3001/grade/';
+const API_URL = 'http://localhost:3001/grade/';
 
 const GRADE_VALIDATION = [
   {
@@ -22,3 +22,8 @@ const GRADE_VALIDATION = [
     maxValue: 50,
   },
 ];
+
+export async function getAllGrades() {
+  const res = await axios.get(API_URL);
+  return res;
+}
