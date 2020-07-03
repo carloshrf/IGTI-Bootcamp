@@ -1,4 +1,4 @@
-const { Router } = require('express');
+const { Router, request } = require('express');
 const accountModel = require('../models/Account');
 
 const routes = Router();
@@ -7,6 +7,27 @@ routes.get('/', async (request, response) => {
   const accounts = await accountModel.find();
 
   response.json(accounts);
+});
+
+routes.get('/search', async (request, response) => {
+  try {
+    const { agencia, conta } = request.body;
+    
+    if (!agencia || !conta) {
+      return response.status(401).json({error: '-Agencia and conta- are needed.'});
+    }
+
+    const account = await accountModel.findOne({conta, agencia});
+    
+    if (account) {
+      return response.json({balance: account.balance});
+    } else {
+      throw new Error('Account does not exists');
+    }
+  } catch (err) {
+    return response.status(500).json({ error: err.message });
+  }
+  
 });
 
 routes.post('/', async (request, response) => {
@@ -19,36 +40,86 @@ routes.post('/', async (request, response) => {
     balance,
   }).save();
 
-  response.json(newAccount);
+  return response.json(newAccount);
 });
 
-routes.patch('/:id', async (request, response) => {
+routes.patch('/deposit/:id', async (request, response) => {
+  try {
+    const hasAccount = await accountModel.findById(request.params.id);
 
-  const hasAccount = await accountModel.findById(request.params.id);
+    if (!hasAccount) {
+      return response.status(401).json({error: 'Does not exists an account with this ID'});
+    }
 
-  if (!hasAccount) {
-    response.status(401).json({error: 'Does not exists an account with this ID'});
+    const { agencia, conta, balance } = request.body;
+
+    if (!!balance && balance < 0) {
+      return response.status(401).json({error: 'Balance must be greater than 0'});
+    }
+
+    !!agencia && (hasAccount.agencia = agencia);
+    !!conta && (hasAccount.conta = conta);
+    !!balance && (hasAccount.balance += balance);
+
+    await accountModel.updateOne({_id: hasAccount.id}, hasAccount)
+
+    return response.status(200).json({balance: hasAccount.balance});
+  } catch (err) {
+    return response.status(500).json({error: err});
+  }
+});
+
+routes.patch('/withdrawl', async (request, response) => {
+  try {
+    const { conta, agencia, value } = request.body;
+
+    const hasAccount = await accountModel.findOne({agencia, conta});
+
+    if (!hasAccount) {
+      throw new Error('Account does not exists');
+    }
+
+    if (!!value && value < 0) {
+      return response.status(401).json({error: 'Value must be greater than 0'});
+    }
+
+    if (hasAccount.balance < (value + 1) ) {
+      return response.status(401).json({error: 'Not enough cash!'});
+    }
+
+    !!value && (hasAccount.balance -= (value + 1));
+
+    await accountModel.updateOne({_id: hasAccount._id}, hasAccount);
+
+    return response.status(201).json({
+      balance: hasAccount.balance, 
+      message: 'Discounted a withdrawl fee of 1'
+    });
+
+  } catch (err) {
+    return response.status(500).json({error: err.message})
   }
 
-  console.log('aaaaaaaaaaaaaaaaaaaaaaa');
+});
 
-  // const { name, agencia, conta, balance } = request.body;
+routes.delete('/delete', async (request, response) => {
+  try {
+    const { conta, agencia } = request.body;
 
-  // if (!!balance && balance <= 0) {
-  //   response.status(401).json({error: 'Balance must be greater than 0'});
-  // }
+    const deletedAccount = await accountModel.findOneAndDelete({agencia, conta});
 
-  // console.log('Não deveria chegar aqui...');
+    if (!deletedAccount) {
+      console.log(deletedAccount)
+      return response.status(401).json({error: 'Does not exists an account with this id'});
+    }
 
-  // !!name && (hasAccount.name = name);
-  // !!agencia && (hasAccount.agencia = agencia);
-  // !!conta && (hasAccount.conta = conta);
-  // !!balance && balance > 0 && (hasAccount.balance += balance);
+    const accounts = await accountModel.find();
 
-  // await accountModel.updateOne({_id: hasAccount.id}, hasAccount)
-
-  response.status(200).json({conta: hasAccount});
+    return response.status(200).json({'remaining accounts': accounts.length});
+  } catch (err) {
+    throw new Error({error: err.message});
+  }
   
-  });
+});
 
 module.exports = routes;
