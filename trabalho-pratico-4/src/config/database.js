@@ -1,9 +1,9 @@
 const mongoose = require('mongoose');
+require('dotenv').config();
 
-const database = 'desafio4';
 const collection = 'accounts';
 
-const uri = `mongodb+srv://omnistack:omnistack@cluster0-fwcub.mongodb.net/${database}?retryWrites=true&w=majority`;
+const uri = `mongodb+srv://${process.env.USERDB}:${process.env.PSWDB}@cluster0-fwcub.mongodb.net/${process.env.COLLECTION}?retryWrites=true&w=majority`;
 
 module.exports = mongoose.connect(uri, {
   useNewUrlParser: true, 

@@ -4,9 +4,57 @@ const accountModel = require('../models/Account');
 const routes = Router();
 
 routes.get('/', async (request, response) => {
-  const accounts = await accountModel.find();
+  try {
+    const accounts = await accountModel.find();
 
-  response.json(accounts);
+    return response.json(accounts.sort((a, b) => a.agencia - b.agencia));
+  } catch(err) {
+    return response.status(500).json({error: err.message});
+  }
+});
+
+routes.get('/agencyaverage/:id', async (request, response) => {
+  try {
+    const accounts = await accountModel.find({agencia: request.params.id});
+
+    const totalAccounts = accounts.length;
+  
+    const totalValue = accounts.reduce((accumulator, account) => {
+      return accumulator + account.balance;
+    }, 0);
+    
+    return response.json({ averageBalance: (totalValue/totalAccounts).toFixed(2) });
+  } catch(err) {
+    return response.status(500).json({error: err.message});
+  }
+});
+
+routes.get('/topbalance/:id', async (request, response) => {
+  try {
+    const accounts = await accountModel.find();
+
+    const orderedAccounts = accounts.sort((a, b) => b.balance - a.balance);
+  
+    const topBalanceAccounts = orderedAccounts.slice(0, request.params.id);
+  
+    return response.json({ topBalanceAccounts });
+  } catch(err) {
+    return response.status(500).json({error: err.message});
+  }
+});
+
+routes.get('/bottombalance/:id', async (request, response) => {
+  try {
+    const accounts = await accountModel.find();
+
+    const orderedAccounts = accounts.sort((a, b) => a.balance - b.balance);
+  
+    const topBalanceAccounts = orderedAccounts.slice(0, request.params.id);
+  
+    return response.json({ topBalanceAccounts });
+  } catch(err) {
+    return response.status(500).json({error: err.message});
+  }
 });
 
 routes.get('/search', async (request, response) => {
@@ -30,17 +78,57 @@ routes.get('/search', async (request, response) => {
   
 });
 
+routes.get('/changeAgency', async (request, response) => {
+  try {
+    const accounts = await accountModel.find({});
+
+    const agencies = accounts.map(account => account.agencia);
+  
+    let uniqueAgencies = [...new Set(agencies)]; 
+
+    const topAgenciesAccountsBalances = [];
+  
+    for (i = 0; i < uniqueAgencies.length; i++) {
+      const agencyAccounts = accounts.filter(account => account.agencia === uniqueAgencies[i]);
+      
+      const currentAccount = agencyAccounts.sort(
+        (a, b) => b.balance - a.balance
+      ).splice(0, 1);
+
+      if (agencyAccounts.agencia !== 99) {
+        topAgenciesAccountsBalances.push(currentAccount[0]);
+      }
+      
+    }
+
+    topAgenciesAccountsBalances.forEach(async (account) => {
+      await accountModel.updateOne({_id: account._id}, {agencia: 99});
+    });
+
+    const allPrivateAgencyAccounts = await accountModel.find({agencia: 99});
+
+    return response.json({ accounts: allPrivateAgencyAccounts });
+  } catch(err) {
+    return response.status(500).json(err.message);
+  }
+
+});
+
 routes.post('/', async (request, response) => {
-  const { agencia, conta, name, balance } = request.body;
+  try {
+    const { agencia, conta, name, balance } = request.body;
 
-  const newAccount = await new accountModel({
-    agencia,
-    conta,
-    name,
-    balance,
-  }).save();
-
-  return response.json(newAccount);
+    const newAccount = await new accountModel({
+      agencia,
+      conta,
+      name,
+      balance,
+    }).save();
+  
+    return response.json(newAccount);
+  } catch(err) {
+    return response.status(500).json(err.message);
+  }
 });
 
 routes.patch('/deposit/:id', async (request, response) => {
@@ -102,6 +190,30 @@ routes.patch('/withdrawl', async (request, response) => {
 
 });
 
+routes.patch('/transfer/:origin/:destiny/:value', async (request, response) => {
+  try {
+    const {origin, destiny, value} = request.params;
+
+    const originAccount = await accountModel.findOne({conta: origin});
+    const destinyAccount = await accountModel.findOne({conta: destiny});
+    
+    if (originAccount.agencia === destinyAccount.agencia) {
+      originAccount.balance -= Number(value);
+      destinyAccount.balance += Number(value);
+    } else {
+      originAccount.balance -= (Number(value) + 8);
+      destinyAccount.balance += Number(value);
+    }
+
+    await accountModel.replaceOne({_id: originAccount.id}, originAccount);
+    await accountModel.replaceOne({_id: destinyAccount.id}, destinyAccount);
+
+    return response.json({originCurrentBalance: originAccount.balance});
+  } catch(err) {
+    return response.status(500).json({error: err.message});
+  }
+});
+
 routes.delete('/delete', async (request, response) => {
   try {
     const { conta, agencia } = request.body;
@@ -109,7 +221,6 @@ routes.delete('/delete', async (request, response) => {
     const deletedAccount = await accountModel.findOneAndDelete({agencia, conta});
 
     if (!deletedAccount) {
-      console.log(deletedAccount)
       return response.status(401).json({error: 'Does not exists an account with this id'});
     }
 
